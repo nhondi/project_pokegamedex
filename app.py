@@ -23,15 +23,42 @@ POKEMON_NAMES = get_pokemon_names()
 def refresh_app():
     st.session_state["needs_refresh"] = True
 
-
 def main():
     st.title("Pokémon Team Tracker and Analysis")
 
+    data = initialise()
+
+    sidebar(data);
+
+    # Analysis Section
+    if data.empty:
+        st.warning("No data to analyse yet!")
+    else:
+        # Exclude placeholders for meaningful stats
+        valid_data = data[(data["Pokemon"] != "None") & (data["Acquisition"] != "N/A")]
+        
+        total_playthroughs = general_analysis(valid_data, data)
+        status_analysis(valid_data, total_playthroughs)
+        type_analysis(valid_data)      
+        stats_analysis(valid_data)
+        insight_analysis()
+        regional_analysis(valid_data)
+
+        # Acquisition Breakdown
+        st.subheader("Acquisition Breakdown")
+        acquisition_counts = valid_data["Acquisition"].value_counts()
+        st.bar_chart(acquisition_counts)
+
+        
+
+def initialise():
     # Load data
     data = load_data()
     data = enrich_data(data)  # Add missing details
     save_data(data)  # Save the updated dataset
+    return data
 
+def sidebar(data):
     # Sidebar: Manage Teams
     st.sidebar.header("Manage Teams")
     if not data.empty:
@@ -107,17 +134,8 @@ def main():
             del st.session_state["new_team"]
             refresh_app()
 
-
-
-
-    # Analysis Section
-    if data.empty:
-        st.warning("No data to analyse yet!")
-    else:
-        # Exclude placeholders for meaningful stats
-        valid_data = data[(data["Pokemon"] != "None") & (data["Acquisition"] != "N/A")]
-
-        # Statistical calculations
+def general_analysis(valid_data, data):
+    # Statistical calculations
         st.subheader("General")
         total_pokemon_used = len(valid_data)
         unique_pokemon = valid_data["Pokemon"].nunique()
@@ -142,95 +160,93 @@ def main():
         fig = px.bar(pokemon_counts, x="Pokémon", y="Count", title="Top 10 Most Commonly Used Pokémon")
         st.plotly_chart(fig)
 
-        st.subheader("Pokémon Status")
+        return total_playthroughs;
+
+def status_analysis(valid_data, total_playthroughs):
+    st.subheader("Pokémon Status")
         
-        total_starters = valid_data["Starter"].sum()
-        avg_starters_per_team = total_starters / total_playthroughs if total_playthroughs > 0 else 0
+    total_starters = valid_data["Starter"].sum()
+    avg_starters_per_team = total_starters / total_playthroughs if total_playthroughs > 0 else 0
 
-        legendary_usage = valid_data["Legendary"].sum()
-        avg_legendaries_per_team = legendary_usage / total_playthroughs
+    legendary_usage = valid_data["Legendary"].sum()
+    avg_legendaries_per_team = legendary_usage / total_playthroughs
 
-        # Average Height and Weight
-        avg_height = valid_data["Height"].mean()
-        avg_weight = valid_data["Weight"].mean()
-
-        st.markdown(f"""
+    st.markdown(f"""
         - **Starter Pokémon Usage**: {total_starters} (Avg: {avg_starters_per_team:.2f} per team)
         - **Legendary Pokémon Usage**: {legendary_usage} (Avg: {avg_legendaries_per_team:.2f} per team)
-        - **Average Pokémon Height**: {avg_height:.2f} m
-        - **Average Pokémon Weight**: {avg_weight:.2f} kg
         """)
-        
-        st.subheader("Pokémon Type Analysis")
-        # Explode types for valid data
-        if "Type" in valid_data.columns:
-            valid_data["Type"] = valid_data["Type"].apply(lambda x: eval(x) if isinstance(x, str) else x)
 
-            # Explode types for independent analysis
-            exploded_types = valid_data.explode("Type")
+def type_analysis(valid_data):
+    st.subheader("Pokémon Type Analysis")
+    # Explode types for valid data
+    if "Type" in valid_data.columns:
+        valid_data["Type"] = valid_data["Type"].apply(lambda x: eval(x) if isinstance(x, str) else x)
 
-            # Most Common Type
-            type_counts = exploded_types["Type"].value_counts()
-            most_common_type = type_counts.idxmax()
-            st.markdown(f"**Most Common Type**: {most_common_type} ({type_counts.max()} occurrences)")
+        # Explode types for independent analysis
+        exploded_types = valid_data.explode("Type")
 
-            # Most Common Starter Type
-            # Ensure "Starter" column is boolean and fill NaN with False
-            valid_data["Starter"] = valid_data["Starter"].fillna(False).astype(bool)
+        # Most Common Type
+        type_counts = exploded_types["Type"].value_counts()
+        most_common_type = type_counts.idxmax()
+        st.markdown(f"**Most Common Type**: {most_common_type} ({type_counts.max()} occurrences)")
 
-            # Filter data for starter Pokémon
-            starter_data = valid_data[valid_data["Starter"]]
-            exploded_starter_types = starter_data.explode("Type")
-            if not exploded_starter_types.empty:
-                starter_type_counts = exploded_starter_types["Type"].value_counts()
-                most_common_starter_type = starter_type_counts.idxmax()
-                st.markdown(f"**Most Common Starter Type**: {most_common_starter_type} ({starter_type_counts.max()} occurrences)")
+        # Most Common Starter Type
+        # Ensure "Starter" column is boolean and fill NaN with False
+        valid_data["Starter"] = valid_data["Starter"].fillna(False).astype(bool)
 
-            # Type Pie Chart
-            st.subheader("Type Distribution (Pie Chart)")
-            if not type_counts.empty:
-                fig, ax = plt.subplots()
-                ax.pie(type_counts, labels=type_counts.index, autopct='%1.1f%%', startangle=90)
-                ax.axis("equal")
-                st.pyplot(fig)
+        # Filter data for starter Pokémon
+        starter_data = valid_data[valid_data["Starter"]]
+        exploded_starter_types = starter_data.explode("Type")
+        if not exploded_starter_types.empty:
+            starter_type_counts = exploded_starter_types["Type"].value_counts()
+            most_common_starter_type = starter_type_counts.idxmax()
+            st.markdown(f"**Most Common Starter Type**: {most_common_starter_type} ({starter_type_counts.max()} occurrences)")
 
-            # Type Coverage Per Team
-            unique_types_per_team = valid_data.groupby(["Game", "Playthrough"])["Type"].apply(
-                lambda types: len(set(t for sublist in types if isinstance(sublist, list) for t in sublist))
-            )
-            st.markdown("**Type Coverage Per Team**")
-            st.table(unique_types_per_team.reset_index(name="Unique Types"))
+        # Type Pie Chart
+        st.subheader("Type Distribution (Pie Chart)")
+        if not type_counts.empty:
+            plot_pie_chart(type_counts, "Type Distribution")
 
-            # Average Types Per Playthrough
-            average_types_per_playthrough = unique_types_per_team.mean()
-            st.markdown(f"**Average Types Per Playthrough**: {average_types_per_playthrough:.2f}")
-        
-        st.subheader("Pokemon Stats")
+        # Type Coverage Per Team
+        unique_types_per_team = valid_data.groupby(["Game", "Playthrough"])["Type"].apply(
+            lambda types: len(set(t for sublist in types if isinstance(sublist, list) for t in sublist))
+        )
+        st.markdown("**Type Coverage Per Team**")
+        st.table(unique_types_per_team.reset_index(name="Unique Types"))
 
-        st.subheader("Pokémon Insights")
+        # Average Types Per Playthrough
+        average_types_per_playthrough = unique_types_per_team.mean()
+        st.markdown(f"**Average Types Per Playthrough**: {average_types_per_playthrough:.2f}")
 
-        # Acquisition Breakdown
-        st.subheader("Acquisition Breakdown")
-        acquisition_counts = data["Acquisition"].value_counts()
-        st.bar_chart(acquisition_counts)
+def stats_analysis(valid_data):
+    st.subheader("Pokemon Stats")
+    # Average Height and Weight
+    avg_height = valid_data["Height"].mean()
+    avg_weight = valid_data["Weight"].mean()
 
-        # Regional Analysis
-        st.header("Regional Analysis")
-        if data.empty:
-            st.warning("No data to analyse yet!")
-        else:
-            # Fetch region for each Pokémon
-            data["Region"] = data["Pokemon"].apply(get_pokemon_region)
+    st.markdown(f"""
+    - **Average Pokémon Height**: {avg_height:.2f} m
+    - **Average Pokémon Weight**: {avg_weight:.2f} kg
+    """)
 
-            # Count Pokémon by region
-            region_counts = data["Region"].value_counts()
+def insight_analysis():
+    st.subheader("Other Pokémon Insights")
 
-            # Display analysis
-            st.subheader("Pokémon Distribution by Region (Pie Chart)")
-            plot_pie_chart(region_counts, "Regional Distribution of Pokémon")
+def regional_analysis(valid_data):
+    # Regional Analysis
+    st.header("Regional Analysis")
+    # Fetch region for each Pokémon
+    valid_data["Region"] = valid_data["Pokemon"].apply(get_pokemon_region)
 
-            st.subheader("Detailed Regional Data")
-            st.write(data[["Pokemon", "Region"]])
+    # Count Pokémon by region
+    region_counts = valid_data["Region"].value_counts()
+
+    # Display analysis
+    st.subheader("Pokémon Distribution by Region (Pie Chart)")
+    plot_pie_chart(region_counts, "Regional Distribution of Pokémon")
+
+    st.subheader("Detailed Regional Data")
+    st.write(valid_data[["Pokemon", "Region"]])
 
 if __name__ == "__main__":
     main()
