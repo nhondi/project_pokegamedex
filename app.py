@@ -1,11 +1,10 @@
 import streamlit as st
 from utils.data_manager import load_data, save_data, clear_data, enrich_data
 from utils.api import get_pokemon_names
-from utils.visualisation import plot_pie_chart
+from utils.visualisation import plot_pie_chart, plot_scatter, plot_histogram, plot_bar, plot_box, plot_heatmap, plot_boxen, plot_grouped_bar, plot_kde, plot_pair, plot_radar, plot_violin
 from utils.api import get_pokemon_region, get_pokemon_details
 import pandas as pd
 import plotly.express as px
-from matplotlib import pyplot as plt
 
 # Constants
 POKEMON_GAMES = [
@@ -203,9 +202,15 @@ def type_analysis(valid_data):
             st.markdown(f"**Most Common Starter Type**: {most_common_starter_type} ({starter_type_counts.max()} occurrences)")
 
         # Type Pie Chart
-        st.subheader("Type Distribution (Pie Chart)")
+        st.subheader("Type Distribution")
+        col1, col2 = st.columns(2)
         if not type_counts.empty:
-            plot_pie_chart(type_counts, "Type Distribution")
+            with col1:
+                plot_pie_chart(type_counts, "Type Distribution")
+                
+            with col2:
+                plot_grouped_bar(valid_data.explode("Type"), category_col="Type", 
+                title="Pokémon Counts by Type", x_label="Type", y_label="Count")
 
         # Type Coverage Per Team
         unique_types_per_team = valid_data.groupby(["Game", "Playthrough"])["Type"].apply(
@@ -220,14 +225,90 @@ def type_analysis(valid_data):
 
 def stats_analysis(valid_data):
     st.subheader("Pokemon Stats")
-    # Average Height and Weight
-    avg_height = valid_data["Height"].mean()
-    avg_weight = valid_data["Weight"].mean()
+    height_weight_insights = generate_height_weight_insights(valid_data)
+    for insight in height_weight_insights:
+        st.markdown(f"- {insight}")
 
-    st.markdown(f"""
-    - **Average Pokémon Height**: {avg_height:.2f} m
-    - **Average Pokémon Weight**: {avg_weight:.2f} kg
-    """)
+    box1, box2 = st.columns(2)
+    with box1:
+        # Height Box Plot
+        plot_box(valid_data, column="Height", 
+            title="Pokémon Height Spread", 
+            y_label="Height (m)")
+        
+    with box2:
+        # Weight Box Plot
+        plot_box(valid_data, column="Weight", 
+            title="Pokémon Weight Spread", 
+            y_label="Weight (kg)")
+
+    plot_scatter(valid_data, x_col="Height", y_col="Weight", 
+             title="Height vs Weight", 
+             x_label="Height (m)", 
+             y_label="Weight (kg)")
+
+    histo1, histo2 = st.columns(2)
+    with histo1:
+        # Height Histogram
+        plot_histogram(valid_data, column="Height", 
+               title="Height Distribution (Histogram)", 
+               x_label="Height (m)")
+
+    with histo2:
+        # Weight Histogram
+        plot_histogram(valid_data, column="Weight", 
+               title="Weight Distribution (Histogram)", 
+               x_label="Weight (kg)")
+        
+    kde1, kde2 = st.columns(2)
+    with kde1:
+        plot_kde(valid_data, column="Height", title="Height Distribution (KDE)", x_label="Height (m)")
+    with kde2:
+        plot_kde(valid_data, column="Weight", title="Weight Distribution (KDE)", x_label="Weight (kg)")
+    
+def generate_height_weight_insights(data):
+    """Generate textual insights from height and weight statistics."""
+    insights = []
+
+    if data.empty:
+        insights.append("No data available to generate height and weight insights.")
+        return insights
+
+    # Height statistics
+    tallest_pokemon = data.loc[data["Height"].idxmax()]
+    shortest_pokemon = data.loc[data["Height"].idxmin()]
+    avg_height = data["Height"].mean()
+    median_height = data["Height"].median()
+    std_height = data["Height"].std()
+
+    # Weight statistics
+    heaviest_pokemon = data.loc[data["Weight"].idxmax()]
+    lightest_pokemon = data.loc[data["Weight"].idxmin()]
+    avg_weight = data["Weight"].mean()
+    median_weight = data["Weight"].median()
+    std_weight = data["Weight"].std()
+
+    # Add insights
+    insights.append(f"The tallest Pokémon used is {tallest_pokemon['Pokemon']} at {tallest_pokemon['Height']:.2f} m, while the shortest is {shortest_pokemon['Pokemon']} at {shortest_pokemon['Height']:.2f} m.")
+    insights.append(f"The heaviest Pokémon used is {heaviest_pokemon['Pokemon']} at {heaviest_pokemon['Weight']:.2f} kg, while the lightest is {lightest_pokemon['Pokemon']} at {lightest_pokemon['Weight']:.2f} kg.")
+    insights.append(f"On average, Pokémon are {avg_height:.2f} m tall and weigh {avg_weight:.2f} kg.")
+    insights.append(f"The median height is {median_height:.2f} m, and the median weight is {median_weight:.2f} kg.")
+    insights.append(f"The standard deviation in height is {std_height:.2f} m, and in weight is {std_weight:.2f} kg.")
+
+    # Add range-based insights
+    most_common_height_range = f"{max(0, median_height - std_height):.2f} m to {median_height + std_height:.2f} m"
+    most_common_weight_range = f"{max(0, median_weight - std_weight):.2f} kg to {median_weight + std_weight:.2f} kg"
+    insights.append(f"Most Pokémon fall within the height range of {most_common_height_range}.")
+    insights.append(f"Most Pokémon weigh between {most_common_weight_range}.")
+
+    # Add correlation if possible
+    correlation = data["Height"].corr(data["Weight"])
+    if not pd.isna(correlation):
+        correlation_strength = "strong" if abs(correlation) > 0.7 else "moderate" if abs(correlation) > 0.4 else "weak"
+        insights.append(f"There is a {correlation_strength} correlation ({correlation:.2f}) between height and weight, indicating that larger Pokémon tend to be heavier.")
+
+    return insights
+
 
 def insight_analysis():
     st.subheader("Other Pokémon Insights")
