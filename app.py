@@ -124,7 +124,6 @@ def main():
         avg_playthroughs_per_game = (
             total_playthroughs / total_games_played if total_games_played > 0 else 0
         )
-        range_pokemon_per_playthrough = valid_data.groupby(["Game", "Playthrough"]).size().agg(["min", "max"])
 
         # Display statistical sentences
         st.markdown(f"""
