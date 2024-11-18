@@ -38,10 +38,10 @@ def main():
         
         total_playthroughs = general_analysis(valid_data, data)
         status_analysis(valid_data, total_playthroughs)
+        regional_analysis(valid_data)
         type_analysis(valid_data)      
         stats_analysis(valid_data)
-        insight_analysis()
-        regional_analysis(valid_data)
+        insight_analysis(valid_data)
 
         # Acquisition Breakdown
         st.subheader("Acquisition Breakdown")
@@ -225,6 +225,9 @@ def type_analysis(valid_data):
 
 def stats_analysis(valid_data):
     st.subheader("Pokemon Stats")
+
+def insight_analysis(valid_data):
+    st.subheader("Other Pokémon Insights")
     height_weight_insights = generate_height_weight_insights(valid_data)
     for insight in height_weight_insights:
         st.markdown(f"- {insight}")
@@ -265,7 +268,6 @@ def stats_analysis(valid_data):
         plot_kde(valid_data, column="Height", title="Height Distribution (KDE)", x_label="Height (m)")
     with kde2:
         plot_kde(valid_data, column="Weight", title="Weight Distribution (KDE)", x_label="Weight (kg)")
-    
 def generate_height_weight_insights(data):
     """Generate textual insights from height and weight statistics."""
     insights = []
@@ -308,10 +310,6 @@ def generate_height_weight_insights(data):
         insights.append(f"There is a {correlation_strength} correlation ({correlation:.2f}) between height and weight, indicating that larger Pokémon tend to be heavier.")
 
     return insights
-
-
-def insight_analysis():
-    st.subheader("Other Pokémon Insights")
 
 def regional_analysis(valid_data):
     # Regional Analysis
