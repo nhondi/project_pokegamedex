@@ -128,10 +128,9 @@ def main():
 
         # Display statistical sentences
         st.markdown(f"""
-        - **Total Pokémon used**: {total_pokemon_used}
-        - **Unique Pokémon**: {unique_pokemon}
+        - **Total Pokémon used**: {total_pokemon_used} (Unique: {unique_pokemon})
         - **Total Games Played**: {total_games_played}
-        - **Playthroughs**: {total_playthroughs} (Avg: {avg_playthroughs_per_game:.2f} per game) (Range: {range_pokemon_per_playthrough['min']} - {range_pokemon_per_playthrough['max']})
+        - **Total Playthroughs**: {total_playthroughs} (Avg: {avg_playthroughs_per_game:.2f} per game)
         """)
 
         # Most Commonly Used Pokemon
