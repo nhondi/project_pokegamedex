@@ -92,20 +92,45 @@ def main():
         game, playthrough = st.session_state["edit_team"]
         team_data = data[(data["Game"] == game) & (data["Playthrough"] == playthrough)]
         st.write(f"### Edit Team: {game} (Playthrough {playthrough})")
+
+        updated_team = []  # To hold the modified team data
         for idx, row in team_data.iterrows():
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2, col3 = st.columns(3)
             with col1:
-                st.text_input("Pokémon", value=row["Pokemon"], key=f"edit_pokemon_{idx}")
+                # Replace text input with dropdown for Pokémon names
+                selected_pokemon = st.selectbox(
+                    "Select Pokémon",
+                    POKEMON_NAMES,
+                    index=POKEMON_NAMES.index(row["Pokemon"]) if row["Pokemon"] in POKEMON_NAMES else 0,
+                    key=f"edit_pokemon_{idx}"
+                )
             with col2:
-                st.selectbox("Acquisition", ["Caught", "Gifted", "Traded", "Hatched", "Other"], index=0, key=f"edit_acq_{idx}")
+                # Acquisition method dropdown
+                acquisition_method = st.selectbox(
+                    "Acquisition Method",
+                    ["Caught", "Gifted", "Traded", "Hatched", "Other"],
+                    index=["Caught", "Gifted", "Traded", "Hatched", "Other"].index(row["Acquisition"]),
+                    key=f"edit_acq_{idx}"
+                )
             with col3:
+                # Remove option
                 if st.button("Remove", key=f"remove_{idx}"):
-                    data = data.drop(idx)
-                    save_data(data)
-                    refresh_app()
-        if st.button("Done Editing"):
+                    continue  # Skip this Pokémon if "Remove" is clicked
+            updated_team.append({
+                "Game": game,
+                "Playthrough": playthrough,
+                "Pokemon": selected_pokemon,
+                "Acquisition": acquisition_method
+            })
+
+        # Save the updated team
+        if st.button("Save Changes"):
+            # Remove the old team data and replace with the updated team
+            data = data[(data["Game"] != game) | (data["Playthrough"] != playthrough)]
+            data = pd.concat([data, pd.DataFrame(updated_team)], ignore_index=True)
+            save_data(data)
             st.session_state.pop("edit_team")
-            refresh_app()
+            refresh_app()  # Refresh the app after saving changes
 
     # Analysis Section
     st.header("Team Analysis")
