@@ -46,10 +46,9 @@ def get_pokemon_details(pokemon_name):
     """Fetch detailed Pokémon attributes, including base stats."""
     try:
         # Normalize the Pokémon name
-        normalized_name = normalize_pokemon_name(pokemon_name)
-
+        normal_name = normalize_pokemon_name(pokemon_name);
         # Fetch Pokémon data
-        response = requests.get(f"{API_BASE_URL}pokemon/{normalized_name}")
+        response = requests.get(f"{API_BASE_URL}pokemon/{pokemon_name.lower()}")
         if response.status_code != 200:
             return {}
 
@@ -61,11 +60,13 @@ def get_pokemon_details(pokemon_name):
 
         # Parse relevant attributes
         legendary = species_data.get("is_legendary", False)
-        starter = is_starter_pokemon(normalized_name)
+        starter = is_starter_pokemon(pokemon_name)
         evolution_stage = 1  # Assume basic, adjust logic for detailed evolution chains
         egg_groups = [group["name"].capitalize() for group in species_data.get("egg_groups", [])]
         height = pokemon_data["height"] / 10.0  # Convert decimetres to metres
         weight = pokemon_data["weight"] / 10.0  # Convert hectograms to kilograms
+
+        types = [type_info["type"]["name"].capitalize() for type_info in pokemon_data["types"]]
 
         # Parse base stats
         base_stats = {stat["stat"]["name"]: stat["base_stat"] for stat in pokemon_data["stats"]}
@@ -77,11 +78,12 @@ def get_pokemon_details(pokemon_name):
             "Egg Groups": egg_groups,
             "Height": height,
             "Weight": weight,
-            "Base Stats": base_stats
+            "Base Stats": base_stats,
+            "Type": types
         }
     except Exception as e:
         print(f"Error fetching Pokémon details for {pokemon_name}: {e}")
-        return {}
+        return {"Type": []}  # Return an empty list for missing types
 
 def is_starter_pokemon(pokemon_name):
     """Determine if a Pokémon is part of a starter evolutionary line."""

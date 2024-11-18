@@ -5,6 +5,7 @@ from utils.visualisation import plot_pie_chart
 from utils.api import get_pokemon_region, get_pokemon_details
 import pandas as pd
 import plotly.express as px
+from matplotlib import pyplot as plt
 
 # Constants
 POKEMON_GAMES = [
@@ -97,7 +98,8 @@ def main():
                         "Egg Groups": [],
                         "Height": None,
                         "Weight": None,
-                        "Base Stats": {"hp": 0, "attack": 0, "defense": 0, "special-attack": 0, "special-defense": 0, "speed": 0}
+                        "Base Stats": {"hp": 0, "attack": 0, "defense": 0, "special-attack": 0, "special-defense": 0, "speed": 0},
+                        "Type": []
                     })
             
             data = pd.concat([data, pd.DataFrame(st.session_state["new_team"])], ignore_index=True)
@@ -158,8 +160,50 @@ def main():
         - **Average Pokémon Height**: {avg_height:.2f} m
         - **Average Pokémon Weight**: {avg_weight:.2f} kg
         """)
+        
+        st.subheader("Pokémon Type Analysis")
+        # Explode types for valid data
+        if "Type" in valid_data.columns:
+            valid_data["Type"] = valid_data["Type"].apply(lambda x: eval(x) if isinstance(x, str) else x)
 
-        st.subheader("Pokemon Types")
+            # Explode types for independent analysis
+            exploded_types = valid_data.explode("Type")
+
+            # Most Common Type
+            type_counts = exploded_types["Type"].value_counts()
+            most_common_type = type_counts.idxmax()
+            st.markdown(f"**Most Common Type**: {most_common_type} ({type_counts.max()} occurrences)")
+
+            # Most Common Starter Type
+            # Ensure "Starter" column is boolean and fill NaN with False
+            valid_data["Starter"] = valid_data["Starter"].fillna(False).astype(bool)
+
+            # Filter data for starter Pokémon
+            starter_data = valid_data[valid_data["Starter"]]
+            exploded_starter_types = starter_data.explode("Type")
+            if not exploded_starter_types.empty:
+                starter_type_counts = exploded_starter_types["Type"].value_counts()
+                most_common_starter_type = starter_type_counts.idxmax()
+                st.markdown(f"**Most Common Starter Type**: {most_common_starter_type} ({starter_type_counts.max()} occurrences)")
+
+            # Type Pie Chart
+            st.subheader("Type Distribution (Pie Chart)")
+            if not type_counts.empty:
+                fig, ax = plt.subplots()
+                ax.pie(type_counts, labels=type_counts.index, autopct='%1.1f%%', startangle=90)
+                ax.axis("equal")
+                st.pyplot(fig)
+
+            # Type Coverage Per Team
+            unique_types_per_team = valid_data.groupby(["Game", "Playthrough"])["Type"].apply(
+                lambda types: len(set(t for sublist in types if isinstance(sublist, list) for t in sublist))
+            )
+            st.markdown("**Type Coverage Per Team**")
+            st.table(unique_types_per_team.reset_index(name="Unique Types"))
+
+            # Average Types Per Playthrough
+            average_types_per_playthrough = unique_types_per_team.mean()
+            st.markdown(f"**Average Types Per Playthrough**: {average_types_per_playthrough:.2f}")
         
         st.subheader("Pokemon Stats")
 

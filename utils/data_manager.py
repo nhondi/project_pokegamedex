@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 from utils.api import get_pokemon_details
-
 DATA_FILE = "data/teams.csv"
 
 def enrich_data(data):
