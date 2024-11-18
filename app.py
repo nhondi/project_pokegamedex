@@ -1,9 +1,10 @@
 import streamlit as st
-from utils.data_manager import load_data, save_data, clear_data, remove_entry
+from utils.data_manager import load_data, save_data, clear_data, enrich_data
 from utils.api import get_pokemon_names
 from utils.visualisation import plot_pie_chart
-from utils.api import get_pokemon_region
+from utils.api import get_pokemon_region, get_pokemon_details
 import pandas as pd
+from collections import Counter
 
 # Constants
 POKEMON_GAMES = [
@@ -27,6 +28,8 @@ def main():
 
     # Load data
     data = load_data()
+    data = enrich_data(data)  # Add missing details
+    save_data(data)  # Save the updated dataset
 
     # Sidebar: Manage Teams
     st.sidebar.header("Manage Teams")
@@ -78,21 +81,84 @@ def main():
                 )
 
         if st.sidebar.button("Save Team"):
-            # Add the new team to the dataset
             for entry in st.session_state["new_team"]:
                 entry.update({"Game": selected_game, "Playthrough": playthrough_number})
+                
+                # Fetch additional details for the Pokémon
+                if entry["Pokemon"] != "None":
+                    details = get_pokemon_details(entry["Pokemon"])
+                    entry.update(details)
+                else:
+                    # Default values for None
+                    entry.update({
+                        "Legendary": False,
+                        "Starter": False,
+                        "Evolution Stage": None,
+                        "Egg Groups": [],
+                        "Height": None,
+                        "Weight": None,
+                        "Base Stats": {"hp": 0, "attack": 0, "defense": 0, "special-attack": 0, "special-defense": 0, "speed": 0}
+                    })
+            
             data = pd.concat([data, pd.DataFrame(st.session_state["new_team"])], ignore_index=True)
             save_data(data)
             del st.session_state["new_team"]
-            refresh_app()  # Refresh after saving
+            refresh_app()
+
 
 
 
     # Analysis Section
-    st.header("Team Analysis")
     if data.empty:
         st.warning("No data to analyse yet!")
     else:
+        # Exclude placeholders for meaningful stats
+        valid_data = data[(data["Pokemon"] != "None") & (data["Acquisition"] != "N/A")]
+
+        # Statistical calculations
+        st.subheader("General")
+        total_pokemon_used = len(valid_data)
+        unique_pokemon = valid_data["Pokemon"].nunique()
+        total_games_played = data["Game"].nunique()
+        total_playthroughs = data[["Game", "Playthrough"]].drop_duplicates().shape[0]
+        avg_playthroughs_per_game = (
+            total_playthroughs / total_games_played if total_games_played > 0 else 0
+        )
+        range_pokemon_per_playthrough = valid_data.groupby(["Game", "Playthrough"]).size().agg(["min", "max"])
+
+        # Display statistical sentences
+        st.markdown(f"""
+        - **Total Pokémon used**: {total_pokemon_used}
+        - **Unique Pokémon**: {unique_pokemon}
+        - **Total Games Played**: {total_games_played}
+        - **Playthroughs**: {total_playthroughs} (Avg: {avg_playthroughs_per_game:.2f} per game) (Range: {range_pokemon_per_playthrough['min']} - {range_pokemon_per_playthrough['max']})
+        """)
+
+        st.subheader("Pokémon Status")
+        
+        total_starters = valid_data["Starter"].sum()
+        avg_starters_per_team = total_starters / total_playthroughs if total_playthroughs > 0 else 0
+
+        legendary_usage = valid_data["Legendary"].sum()
+        avg_legendaries_per_team = legendary_usage / total_playthroughs
+
+        # Average Height and Weight
+        avg_height = valid_data["Height"].mean()
+        avg_weight = valid_data["Weight"].mean()
+
+        st.markdown(f"""
+        - **Starter Pokémon Usage**: {total_starters} (Avg: {avg_starters_per_team:.2f} per team)
+        - **Legendary Pokémon Usage**: {legendary_usage} (Avg: {avg_legendaries_per_team:.2f} per team)
+        - **Average Pokémon Height**: {avg_height:.2f} m
+        - **Average Pokémon Weight**: {avg_weight:.2f} kg
+        """)
+
+        st.subheader("Pokemon Types")
+        
+        st.subheader("Pokemon Stats")
+
+        st.subheader("Pokémon Insights")
+
         # Most Common Pokémon
         st.subheader("Most Common Pokémon")
         most_common = data["Pokemon"].value_counts().head(5)

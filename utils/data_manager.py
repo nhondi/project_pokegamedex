@@ -1,7 +1,26 @@
 import os
 import pandas as pd
+from utils.api import get_pokemon_details
 
 DATA_FILE = "data/teams.csv"
+
+def enrich_data(data):
+    """Enrich the dataset with additional Pokémon details."""
+    enriched_rows = []
+    for _, row in data.iterrows():
+        # Skip rows where Pokémon is 'None'
+        if row["Pokemon"] == "None":
+            enriched_rows.append(row)
+            continue
+
+        # Fetch details if missing
+        details = get_pokemon_details(row["Pokemon"])
+        for key, value in details.items():
+            row[key] = row.get(key, value)  # Update only if missing
+        enriched_rows.append(row)
+
+    return pd.DataFrame(enriched_rows)
+
 
 def load_data():
     """Load team data from CSV or create an empty structure if missing."""
