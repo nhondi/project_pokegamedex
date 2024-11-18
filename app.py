@@ -211,7 +211,6 @@ def type_analysis(valid_data):
         # Average Types Per Playthrough
         average_types_per_playthrough = unique_types_per_team.mean()
         st.markdown(f"**Average Types Per Playthrough**: {average_types_per_playthrough:.2f}")
-
 def generate_type_insights(valid_data):
     """Generate insights related to Pokémon types."""
     insights = []
@@ -333,20 +332,61 @@ def generate_height_weight_insights(data):
     return insights
 
 def regional_analysis(valid_data):
-    # Regional Analysis
-    st.header("Regional Analysis")
     # Fetch region for each Pokémon
     valid_data["Region"] = valid_data["Pokemon"].apply(get_pokemon_region)
+
+    # Regional Analysis
+    st.header("Regional Analysis")
+    region_insights = generate_region_insights(valid_data)
+    for insight in region_insights:
+        st.markdown(f"- {insight}")
 
     # Count Pokémon by region
     region_counts = valid_data["Region"].value_counts()
 
     # Display analysis
-    st.subheader("Pokémon Distribution by Region (Pie Chart)")
-    plot_pie_chart(region_counts, "Regional Distribution of Pokémon")
+    col1, col2 = st.columns(2)
+    with col1:
+        plot_pie_chart(region_counts, "Regional Distribution of Pokémon")
+    with col2:
+        plot_bar(region_counts, title="Pokémon Counts by Region", x_label="Region", y_label="Count")
 
-    st.subheader("Detailed Regional Data")
-    st.write(valid_data[["Pokemon", "Region"]])
+def generate_region_insights(data):
+    """Generate insights from regional Pokémon data."""
+    insights = []
+
+    # Check if the dataset is empty
+    if data.empty or "Region" not in data.columns:
+        insights.append("No regional data available for analysis.")
+        return insights
+
+    # Count Pokémon by region
+    region_counts = data["Region"].value_counts()
+
+    # Total Pokémon and unique regions
+    total_pokemon = region_counts.sum()
+    unique_regions = region_counts.index.nunique()
+
+    # Most and least common regions
+    most_common_region = region_counts.idxmax()
+    most_common_count = region_counts.max()
+    least_common_region = region_counts.idxmin()
+    least_common_count = region_counts.min()
+
+    # Percentage contribution of the most common region
+    most_common_percentage = (most_common_count / total_pokemon) * 100
+
+    # Add insights
+    insights.append(f"A total of {total_pokemon} Pokémon are distributed across {unique_regions} regions.")
+    insights.append(f"The most common region is {most_common_region} with {most_common_count} Pokémon, making up {most_common_percentage:.2f}% of the total.")
+    insights.append(f"The least common region is {least_common_region} with only {least_common_count} Pokémon.")
+
+    # Optional: Highlight even distribution
+    avg_pokemon_per_region = total_pokemon / unique_regions
+    if least_common_count < avg_pokemon_per_region * 0.5:
+        insights.append(f"There is a significant imbalance, with {least_common_region} having much fewer Pokémon than the average of {avg_pokemon_per_region:.2f} per region.")
+
+    return insights
 
 if __name__ == "__main__":
     main()

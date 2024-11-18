@@ -60,6 +60,7 @@ def plot_heatmap(data, x_col, y_col, title):
     ax.set_xlabel(x_col)
     ax.set_ylabel(y_col)
     st.pyplot(fig)
+    
 
 def plot_pair(data, columns, title):
     """Render a pair plot using seaborn."""
