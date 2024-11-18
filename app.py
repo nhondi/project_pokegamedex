@@ -4,7 +4,7 @@ from utils.api import get_pokemon_names
 from utils.visualisation import plot_pie_chart
 from utils.api import get_pokemon_region, get_pokemon_details
 import pandas as pd
-from collections import Counter
+import plotly.express as px
 
 # Constants
 POKEMON_GAMES = [
@@ -134,6 +134,14 @@ def main():
         - **Playthroughs**: {total_playthroughs} (Avg: {avg_playthroughs_per_game:.2f} per game) (Range: {range_pokemon_per_playthrough['min']} - {range_pokemon_per_playthrough['max']})
         """)
 
+        # Most Commonly Used Pokemon
+        pokemon_counts = valid_data["Pokemon"].value_counts().head(10).reset_index()
+        pokemon_counts.columns = ["Pokémon", "Count"]
+
+        # Create interactive bar chart
+        fig = px.bar(pokemon_counts, x="Pokémon", y="Count", title="Top 10 Most Commonly Used Pokémon")
+        st.plotly_chart(fig)
+
         st.subheader("Pokémon Status")
         
         total_starters = valid_data["Starter"].sum()
@@ -158,11 +166,6 @@ def main():
         st.subheader("Pokemon Stats")
 
         st.subheader("Pokémon Insights")
-
-        # Most Common Pokémon
-        st.subheader("Most Common Pokémon")
-        most_common = data["Pokemon"].value_counts().head(5)
-        st.bar_chart(most_common)
 
         # Acquisition Breakdown
         st.subheader("Acquisition Breakdown")
