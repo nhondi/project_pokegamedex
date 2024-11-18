@@ -13,8 +13,13 @@ POKEMON_GAMES = [
     "Shining Pearl", "Legends: Arceus", "Scarlet", "Violet"
 ]
 
-# Load Pokémon names from API or local fallback
+# Load Pokémon names from API or fallback to a local list
 POKEMON_NAMES = get_pokemon_names()
+
+# Helper function to refresh app
+def refresh_app():
+    st.session_state["needs_refresh"] = True
+
 
 def main():
     st.title("Pokémon Team Tracker and Analysis")
@@ -25,16 +30,21 @@ def main():
     # Sidebar: Manage Teams
     st.sidebar.header("Manage Teams")
     if not data.empty:
-        st.sidebar.write("### Current Teams")
-        for idx, row in data.iterrows():
-            st.sidebar.write(f"{row['Game']} (Playthrough {row['Playthrough']}): {row['Pokemon']} [{row['Acquisition']}]")
-            if st.sidebar.button(f"Remove Entry {idx}", key=f"remove_{idx}"):
-                remove_entry(idx)
-                st.session_state["needs_refresh"] = True
+        grouped = data.groupby(["Game", "Playthrough"])
+        for (game, playthrough), group in grouped:
+            st.sidebar.write(f"**{game} Playthrough {playthrough}**")
+            if st.sidebar.button(f"Edit Team ({game} Playthrough {playthrough})", key=f"edit_{game}_{playthrough}"):
+                st.session_state["edit_team"] = (game, playthrough)
+                refresh_app()
+
+            if st.sidebar.button(f"Delete Team ({game} Playthrough {playthrough})", key=f"delete_{game}_{playthrough}"):
+                data = data[(data["Game"] != game) | (data["Playthrough"] != playthrough)]
+                save_data(data)
+                refresh_app()
 
     if st.sidebar.button("Clear All Data"):
         clear_data()
-        st.session_state["needs_refresh"] = True
+        refresh_app()
 
     # Add New Team
     st.sidebar.write("### Add New Team")
@@ -74,9 +84,29 @@ def main():
             data = pd.concat([data, pd.DataFrame(new_team)], ignore_index=True)
             save_data(data)
             st.session_state["add_team"] = False
-            st.session_state["needs_refresh"] = True
+            refresh_app()
 
-    # Main Analysis Section
+    # Edit Team
+    if "edit_team" in st.session_state:
+        game, playthrough = st.session_state["edit_team"]
+        team_data = data[(data["Game"] == game) & (data["Playthrough"] == playthrough)]
+        st.write(f"### Edit Team: {game} (Playthrough {playthrough})")
+        for idx, row in team_data.iterrows():
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.text_input("Pokémon", value=row["Pokemon"], key=f"edit_pokemon_{idx}")
+            with col2:
+                st.selectbox("Acquisition", ["Caught", "Gifted", "Traded", "Hatched", "Other"], index=0, key=f"edit_acq_{idx}")
+            with col3:
+                if st.button("Remove", key=f"remove_{idx}"):
+                    data = data.drop(idx)
+                    save_data(data)
+                    refresh_app()
+        if st.button("Done Editing"):
+            st.session_state.pop("edit_team")
+            refresh_app()
+
+    # Analysis Section
     st.header("Team Analysis")
     if data.empty:
         st.warning("No data to analyse yet!")
@@ -90,6 +120,10 @@ def main():
         st.subheader("Acquisition Breakdown")
         acquisition_counts = data["Acquisition"].value_counts()
         st.bar_chart(acquisition_counts)
+
+        # Regional Analysis (Example)
+        st.subheader("Regional Analysis")
+        st.write("Coming soon: Group Pokémon by their native regions!")
 
 if __name__ == "__main__":
     main()
