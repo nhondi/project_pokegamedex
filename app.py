@@ -50,44 +50,42 @@ def main():
     playthrough_number = st.sidebar.number_input("Playthrough Number", min_value=1, step=1)
 
     if st.sidebar.button("Add Team"):
-        st.session_state["add_team"] = True
+        # Initialise session state for the new team
+        if "new_team" not in st.session_state:
+            st.session_state["new_team"] = [{"Pokemon": "None", "Acquisition": "N/A"} for _ in range(6)]
 
-    if st.session_state.get("add_team", False):
+    if "new_team" in st.session_state:
         st.sidebar.write("### Enter Pokémon Details")
-        new_team = []
         for i in range(6):
             col1, col2 = st.sidebar.columns(2)
             with col1:
-                selected_pokemon = st.selectbox(
+                st.session_state["new_team"][i]["Pokemon"] = st.selectbox(
                     f"Select Pokémon {i + 1}",
-                    ["None"] + POKEMON_NAMES,  # Add "None" option
-                    key=f"pokemon_{i}",
-                    help="Start typing to search for a Pokémon."
+                    ["None"] + POKEMON_NAMES,
+                    index=0 if st.session_state["new_team"][i]["Pokemon"] == "None"
+                    else POKEMON_NAMES.index(st.session_state["new_team"][i]["Pokemon"]) + 1,
+                    key=f"new_pokemon_{i}"
                 )
             with col2:
-                acquisition_method = st.selectbox(
+                st.session_state["new_team"][i]["Acquisition"] = st.selectbox(
                     f"Acquisition {i + 1}",
                     ["N/A", "Caught", "Gifted", "Traded", "Hatched", "Other"],
-                    index=0 if selected_pokemon == "None" else 1,  # Default to N/A if Pokémon is None
-                    key=f"acquisition_{i}"
+                    index=0 if st.session_state["new_team"][i]["Acquisition"] == "N/A"
+                    else ["Caught", "Gifted", "Traded", "Hatched", "Other"].index(
+                        st.session_state["new_team"][i]["Acquisition"]
+                    ) + 1,
+                    key=f"new_acq_{i}"
                 )
 
-            # Automatically set acquisition to N/A if Pokémon is None
-            if selected_pokemon == "None":
-                acquisition_method = "N/A"
-
-            new_team.append({
-                "Game": selected_game,
-                "Playthrough": playthrough_number,
-                "Pokemon": selected_pokemon,
-                "Acquisition": acquisition_method
-            })
-
-        if len(new_team) == 6 and st.sidebar.button("Save Team"):
-            data = pd.concat([data, pd.DataFrame(new_team)], ignore_index=True)
+        if st.sidebar.button("Save Team"):
+            # Add the new team to the dataset
+            for entry in st.session_state["new_team"]:
+                entry.update({"Game": selected_game, "Playthrough": playthrough_number})
+            data = pd.concat([data, pd.DataFrame(st.session_state["new_team"])], ignore_index=True)
             save_data(data)
-            st.session_state["add_team"] = False
-            refresh_app()
+            del st.session_state["new_team"]
+            refresh_app()  # Refresh after saving
+
 
 
     # Analysis Section
