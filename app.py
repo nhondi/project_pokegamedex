@@ -2,6 +2,7 @@ import streamlit as st
 from utils.data_manager import load_data, save_data, clear_data, remove_entry
 from utils.api import get_pokemon_names
 from utils.visualisation import plot_pie_chart
+from utils.api import get_pokemon_region
 import pandas as pd
 
 # Constants
@@ -121,9 +122,23 @@ def main():
         acquisition_counts = data["Acquisition"].value_counts()
         st.bar_chart(acquisition_counts)
 
-        # Regional Analysis (Example)
-        st.subheader("Regional Analysis")
-        st.write("Coming soon: Group Pokémon by their native regions!")
+        # Regional Analysis
+        st.header("Regional Analysis")
+        if data.empty:
+            st.warning("No data to analyse yet!")
+        else:
+            # Fetch region for each Pokémon
+            data["Region"] = data["Pokemon"].apply(get_pokemon_region)
+
+            # Count Pokémon by region
+            region_counts = data["Region"].value_counts()
+
+            # Display analysis
+            st.subheader("Pokémon Distribution by Region (Pie Chart)")
+            plot_pie_chart(region_counts, "Regional Distribution of Pokémon")
+
+            st.subheader("Detailed Regional Data")
+            st.write(data[["Pokemon", "Region"]])
 
 if __name__ == "__main__":
     main()
