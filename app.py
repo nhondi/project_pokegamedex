@@ -181,26 +181,15 @@ def type_analysis(valid_data):
     if "Type" in valid_data.columns:
         valid_data["Type"] = valid_data["Type"].apply(lambda x: eval(x) if isinstance(x, str) else x)
 
+        type_insights = generate_type_insights(valid_data)
+        for insight in type_insights:
+            st.markdown(f"- {insight}")
+
         # Explode types for independent analysis
         exploded_types = valid_data.explode("Type")
 
         # Most Common Type
         type_counts = exploded_types["Type"].value_counts()
-        most_common_type = type_counts.idxmax()
-        st.markdown(f"**Most Common Type**: {most_common_type} ({type_counts.max()} occurrences)")
-
-        # Most Common Starter Type
-        # Ensure "Starter" column is boolean and fill NaN with False
-        valid_data["Starter"] = valid_data["Starter"].fillna(False).astype(bool)
-
-        # Filter data for starter Pokémon
-        starter_data = valid_data[valid_data["Starter"]]
-        exploded_starter_types = starter_data.explode("Type")
-        if not exploded_starter_types.empty:
-            starter_type_counts = exploded_starter_types["Type"].value_counts()
-            most_common_starter_type = starter_type_counts.idxmax()
-            st.markdown(f"**Most Common Starter Type**: {most_common_starter_type} ({starter_type_counts.max()} occurrences)")
-
         # Type Pie Chart
         st.subheader("Type Distribution")
         col1, col2 = st.columns(2)
@@ -222,6 +211,38 @@ def type_analysis(valid_data):
         # Average Types Per Playthrough
         average_types_per_playthrough = unique_types_per_team.mean()
         st.markdown(f"**Average Types Per Playthrough**: {average_types_per_playthrough:.2f}")
+
+def generate_type_insights(valid_data):
+    """Generate insights related to Pokémon types."""
+    insights = []
+    # Explode types for analysis
+    exploded_types = valid_data.explode("Type")
+
+    # Most Common Type
+    type_counts = exploded_types["Type"].value_counts()
+    if not type_counts.empty:
+        most_common_type = type_counts.idxmax()
+        most_common_type_count = type_counts.max()
+        insights.append(f"The most common type is {most_common_type}, appearing {most_common_type_count} times.")
+
+    # Starter Pokémon Type Analysis
+    starter_data = valid_data[valid_data["Starter"]]
+    exploded_starter_types = starter_data.explode("Type")
+    if not exploded_starter_types.empty:
+        starter_type_counts = exploded_starter_types["Type"].value_counts()
+        most_common_starter_type = starter_type_counts.idxmax()
+        most_common_starter_type_count = starter_type_counts.max()
+        insights.append(f"The most common starter type is {most_common_starter_type}, appearing {most_common_starter_type_count} times among starter Pokémon.")
+
+    # Type Coverage Insights
+    unique_types_per_team = valid_data.groupby(["Game", "Playthrough"])["Type"].apply(
+        lambda types: len(set(t for sublist in types if isinstance(sublist, list) for t in sublist))
+    )
+    if not unique_types_per_team.empty:
+        average_types_per_playthrough = unique_types_per_team.mean()
+        insights.append(f"On average, teams cover {average_types_per_playthrough:.2f} unique types per playthrough.")
+
+    return insights
 
 def stats_analysis(valid_data):
     st.subheader("Pokemon Stats")
