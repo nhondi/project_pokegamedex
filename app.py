@@ -74,7 +74,7 @@ def sidebar(data):
 
             # Display sprites as images in a single horizontal row
             if sprites:
-                st.sidebar.image(sprites, width=20, caption=None, use_column_width=False)
+                st.sidebar.image(sprites, width=40, caption=None, use_column_width=False)
 
             if st.sidebar.button(f"Delete Team ({game} Playthrough {playthrough})", key=f"delete_{game}_{playthrough}"):
                 data = data[(data["Game"] != game) | (data["Playthrough"] != playthrough)]
