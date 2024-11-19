@@ -12,3 +12,7 @@ This project is a Streamlit app that allows users to track and analyse Pokémon 
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
+3. Run app
+    ```bash
+   streamlit run app.py
+
