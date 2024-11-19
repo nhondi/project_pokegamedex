@@ -71,7 +71,10 @@ def get_pokemon_details(pokemon_name):
         # Parse base stats
         base_stats = {stat["stat"]["name"]: stat["base_stat"] for stat in pokemon_data["stats"]}
 
+        sprite_url = pokemon_data["sprites"]["front_default"]  # Fetch default sprite URL
+
         return {
+            "Sprite URL": sprite_url,
             "Legendary": legendary,
             "Starter": starter,
             "Evolution Stage": evolution_stage,

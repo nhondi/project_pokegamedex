@@ -66,6 +66,16 @@ def sidebar(data):
         for (game, playthrough), group in grouped:
             st.sidebar.write(f"**{game} Playthrough {playthrough}**")
 
+            sprites = []
+            for _, row in group.iterrows():
+                sprite_url = row.get("Sprite URL", None)
+                if sprite_url:
+                    sprites.append(sprite_url)
+
+            # Display sprites as images in a single horizontal row
+            if sprites:
+                st.sidebar.image(sprites, width=40, caption=None, use_column_width=False)
+
             if st.sidebar.button(f"Delete Team ({game} Playthrough {playthrough})", key=f"delete_{game}_{playthrough}"):
                 data = data[(data["Game"] != game) | (data["Playthrough"] != playthrough)]
                 save_data(data)
@@ -384,7 +394,6 @@ def generate_stat_insights(stats, exploded_data):
         insights.append(f"The lowest {stat.capitalize()} is {min_stat_value} by {min_stat_pokemon}.")
 
     return insights
-
 
 def insight_analysis(valid_data):
     st.subheader("Other Pokémon Insights")
