@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import streamlit as st
 import seaborn as sns
-import pandas as pd
 import numpy as np
 
 def plot_pie_chart(data, title):
@@ -46,11 +45,6 @@ def plot_box(data, column, title, y_label):
     ax.boxplot(data[column], vert=True, patch_artist=True, boxprops=dict(facecolor='skyblue', color='black'))
     ax.set_title(title)
     ax.set_ylabel(y_label)
-    st.pyplot(fig)
-
-def plot_pair(data, columns, title):
-    """Render a pair plot using seaborn."""
-    fig = sns.pairplot(data[columns], diag_kind="kde", plot_kws={"alpha": 0.7})
     st.pyplot(fig)
 
 def plot_grouped_bar(data, category_col, title, x_label, y_label):

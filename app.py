@@ -206,10 +206,6 @@ def type_analysis(valid_data):
         )
         st.markdown("**Type Coverage Per Team**")
         st.table(unique_types_per_team.reset_index(name="Unique Types"))
-
-        # Average Types Per Playthrough
-        average_types_per_playthrough = unique_types_per_team.mean()
-        st.markdown(f"**Average Types Per Playthrough**: {average_types_per_playthrough:.2f}")
 def generate_type_insights(valid_data):
     """Generate insights related to Pokémon types."""
     insights = []
@@ -345,8 +341,6 @@ def stats_analysis(valid_data):
         title="Distribution of Base Stat Totals",
         x_label="Stat Total"
     )
-
-
 def generate_stat_insights(stats, exploded_data):
     """Generate insights for average stats, specific Pokémon, and statistical measures."""
     insights = []
