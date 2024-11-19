@@ -190,8 +190,6 @@ def type_analysis(valid_data):
 
         # Most Common Type
         type_counts = exploded_types["Type"].value_counts()
-        # Type Pie Chart
-        st.subheader("Type Distribution")
         col1, col2 = st.columns(2)
         if not type_counts.empty:
             with col1:
@@ -350,7 +348,6 @@ def regional_analysis(valid_data):
         plot_pie_chart(region_counts, "Regional Distribution of Pokémon")
     with col2:
         plot_bar(region_counts, title="Pokémon Counts by Region", x_label="Region", y_label="Count")
-
 def generate_region_insights(data):
     """Generate insights from regional Pokémon data."""
     insights = []
