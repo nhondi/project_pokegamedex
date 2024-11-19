@@ -48,31 +48,9 @@ def plot_box(data, column, title, y_label):
     ax.set_ylabel(y_label)
     st.pyplot(fig)
 
-def plot_heatmap(data, x_col, y_col, title):
-    """Render a heatmap for height and weight density."""
-    fig, ax = plt.subplots()
-    heatmap_data = pd.DataFrame({
-        x_col: data[x_col],
-        y_col: data[y_col]
-    }).pivot_table(index=y_col, columns=x_col, aggfunc='size', fill_value=0)
-    sns.heatmap(heatmap_data, cmap="coolwarm", ax=ax)
-    ax.set_title(title)
-    ax.set_xlabel(x_col)
-    ax.set_ylabel(y_col)
-    st.pyplot(fig)
-    
-
 def plot_pair(data, columns, title):
     """Render a pair plot using seaborn."""
     fig = sns.pairplot(data[columns], diag_kind="kde", plot_kws={"alpha": 0.7})
-    st.pyplot(fig)
-
-def plot_boxen(data, column, title, y_label):
-    """Render a boxen plot using seaborn."""
-    fig, ax = plt.subplots(figsize=(8, 6))
-    sns.boxenplot(data[column], ax=ax, color="lightblue")
-    ax.set_title(title)
-    ax.set_ylabel(y_label)
     st.pyplot(fig)
 
 def plot_grouped_bar(data, category_col, title, x_label, y_label):
@@ -85,23 +63,15 @@ def plot_grouped_bar(data, category_col, title, x_label, y_label):
     ax.set_ylabel(y_label)
     st.pyplot(fig)
 
-def plot_violin(data, column, title, y_label):
-    """Render a violin plot using seaborn."""
-    fig, ax = plt.subplots(figsize=(8, 6))
-    sns.violinplot(data=data[column], ax=ax, color="skyblue")
-    ax.set_title(title)
-    ax.set_ylabel(y_label)
-    st.pyplot(fig)
-
 def plot_radar(stats, labels, title):
     """Render a radar chart for base stats."""
     angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
     stats += stats[:1]  # Complete the circle
     angles += angles[:1]
 
-    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+    fig, ax = plt.subplots(figsize=(12, 8), subplot_kw=dict(polar=True))
     ax.fill(angles, stats, color="blue", alpha=0.25)
-    ax.plot(angles, stats, color="blue", linewidth=2)
+    ax.plot(angles, stats, color="blue", linewidth=1)
     ax.set_yticks([])
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(labels)
@@ -116,3 +86,12 @@ def plot_kde(data, column, title, x_label):
     ax.set_xlabel(x_label)
     ax.set_ylabel("Density")
     st.pyplot(fig)
+
+def plot_average_bar(stats, title="Average Stats"):
+    fig, ax = plt.subplots(figsize=(8,6))
+    ax.bar(stats.index, stats.values, color='skyblue', edgecolor='black')
+    ax.set_title(title)
+    ax.set_ylabel("Average Value")
+    ax.set_xlabel("Stat")
+    st.pyplot(fig)
+

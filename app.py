@@ -1,10 +1,11 @@
 import streamlit as st
 from utils.data_manager import load_data, save_data, clear_data, enrich_data
 from utils.api import get_pokemon_names
-from utils.visualisation import plot_pie_chart, plot_scatter, plot_histogram, plot_bar, plot_box, plot_heatmap, plot_boxen, plot_grouped_bar, plot_kde, plot_pair, plot_radar, plot_violin
+from utils.visualisation import plot_pie_chart, plot_scatter, plot_histogram, plot_bar, plot_box, plot_grouped_bar, plot_kde, plot_radar, plot_average_bar
 from utils.api import get_pokemon_region, get_pokemon_details
 import pandas as pd
 import plotly.express as px
+from math import ceil
 
 # Constants
 POKEMON_GAMES = [
@@ -242,7 +243,154 @@ def generate_type_insights(valid_data):
     return insights
 
 def stats_analysis(valid_data):
-    st.subheader("Pokemon Stats")
+    st.subheader("Pokémon Stats Analysis")
+
+    # Prepare Base Stats as a DataFrame
+    valid_data["Base Stats"] = valid_data["Base Stats"].apply(eval)  # Convert strings to dictionaries
+    base_stats_df = pd.DataFrame(valid_data["Base Stats"].tolist())
+    base_stats_df["Pokemon"] = valid_data["Pokemon"]
+
+    # Ensure numeric columns only
+    numeric_stats = ["hp", "attack", "defense", "special-attack", "special-defense", "speed"]
+    base_stats_df = base_stats_df[numeric_stats + ["Pokemon"]]
+
+    # Calculate stat totals
+    base_stats_df["Stat Total"] = base_stats_df[numeric_stats].apply(pd.to_numeric, errors='coerce').sum(axis=1)
+
+    # Calculate overall stats
+    avg_stats = base_stats_df[numeric_stats].mean()
+    min_stat = base_stats_df[numeric_stats].min()
+    max_stat = base_stats_df[numeric_stats].max()
+    median_stats = base_stats_df[numeric_stats].median()
+
+    # Generate and display insights
+    stat_insights = generate_stat_insights(avg_stats, base_stats_df)
+    for insight in stat_insights:
+        st.markdown(f"- {insight}")
+
+    # Visualisations
+    st.markdown("#### Visualisations")
+
+    # Radar Chart for Average Stats
+    avg1, avg2 = st.columns(2)
+    with avg1:
+        plot_radar(
+            stats=avg_stats.tolist(),
+            labels=["HP", "Attack", "Defense", "Sp. Attack", "Sp. Defense", "Speed"],
+            title="Radar Chart of Average Base Stats"
+        )
+    with avg2:
+        plot_average_bar(avg_stats, title="Average Base Stats Across Pokémon")
+    
+    # Box Plots for Each Stat
+    st.markdown("##### Box Plots for Individual Stats")
+    columns = st.columns(ceil(len(numeric_stats) / 2))
+
+    for idx, stat in enumerate(numeric_stats):
+        with columns[idx % len(columns)]:
+            plot_box(
+                data=base_stats_df,
+                column=stat,
+                title=f"Box Plot for {stat.capitalize()}",
+                y_label=f"{stat.capitalize()} Value"
+            )
+
+    # Box Plot for Base Stat Totals
+    st.markdown("##### Box Plot: Base Stat Totals")
+    plot_box(
+        data=base_stats_df,
+        column="Stat Total",
+        title="Box Plot for Base Stat Totals",
+        y_label="Stat Total"
+    )
+
+    # Histogram for Individual Stats
+    st.markdown("##### Histograms for Individual Stats")
+    columns2 = st.columns(ceil(len(numeric_stats) / 2))
+    for idx, stat in enumerate(numeric_stats):
+        with columns2[idx % len(columns2)]:
+            plot_histogram(
+                data=base_stats_df,
+                column=stat,
+                title=f"Distribution of {stat.capitalize()}",
+                x_label=f"{stat.capitalize()} Value"
+            )
+
+    # Histogram for Base Stat Totals
+    st.markdown("##### Histogram: Base Stat Totals")
+    plot_histogram(
+        data=base_stats_df,
+        column="Stat Total",
+        title="Distribution of Base Stat Totals",
+        x_label="Stat Total"
+    )
+
+    # KDE for Individual Stats
+    st.markdown("##### KDE for Individual Stats")
+    columns2 = st.columns(ceil(len(numeric_stats) / 2))
+    for idx, stat in enumerate(numeric_stats):
+        with columns2[idx % len(columns2)]:
+            plot_kde(
+                data=base_stats_df,
+                column=stat,
+                title=f"Distribution of {stat.capitalize()}",
+                x_label=f"{stat.capitalize()} Value"
+            )
+
+    # KDE for Base Stat Totals
+    st.markdown("##### KDE: Base Stat Totals")
+    plot_kde(
+        data=base_stats_df,
+        column="Stat Total",
+        title="Distribution of Base Stat Totals",
+        x_label="Stat Total"
+    )
+
+
+def generate_stat_insights(stats, exploded_data):
+    """Generate insights for average stats, specific Pokémon, and statistical measures."""
+    insights = []
+
+    # Overall average stats
+    highest_stat = stats.idxmax()
+    lowest_stat = stats.idxmin()
+    highest_stat_pokemon = exploded_data.loc[exploded_data[highest_stat].idxmax(), "Pokemon"]
+    lowest_stat_pokemon = exploded_data.loc[exploded_data[lowest_stat].idxmin(), "Pokemon"]
+
+    insights.append(f"The highest average stat is {highest_stat.capitalize()} with {stats[highest_stat]:.2f}.")
+    insights.append(f"The lowest average stat is {lowest_stat.capitalize()} with {stats[lowest_stat]:.2f}.")
+
+    # Base stat totals
+    exploded_data["Stat Total"] = exploded_data[["hp", "attack", "defense", "special-attack", "special-defense", "speed"]].sum(axis=1)
+    max_total_pokemon = exploded_data.loc[exploded_data["Stat Total"].idxmax(), "Pokemon"]
+    min_total_pokemon = exploded_data.loc[exploded_data["Stat Total"].idxmin(), "Pokemon"]
+    avg_total = exploded_data["Stat Total"].mean()
+    median_total = exploded_data["Stat Total"].median()
+    std_total = exploded_data["Stat Total"].std()
+    min_total = exploded_data["Stat Total"].min()
+    max_total = exploded_data["Stat Total"].max()
+
+    insights.append(f"The highest base stat total is {max_total} by {max_total_pokemon}.")
+    insights.append(f"The lowest base stat total is {min_total} by {min_total_pokemon}.")
+    insights.append(f"On average, Pokémon have a base stat total of {avg_total:.2f}.")
+    insights.append(f"The median base stat total is {median_total:.2f}, with a standard deviation of {std_total:.2f}.")
+
+    # Range for base stat total
+    range_total = max_total - min_total
+    insights.append(f"The range of base stat totals is {range_total}, from {min_total} to {max_total}.")
+
+    # Stat-specific box plot insights
+    for stat in ["hp", "attack", "defense", "special-attack", "special-defense", "speed"]:
+        max_stat_pokemon = exploded_data.loc[exploded_data[stat].idxmax(), "Pokemon"]
+        min_stat_pokemon = exploded_data.loc[exploded_data[stat].idxmin(), "Pokemon"]
+        max_stat_value = exploded_data[stat].max()
+        min_stat_value = exploded_data[stat].min()
+
+        insights.append(f"The highest {stat.capitalize()} is {max_stat_value} by {max_stat_pokemon}.")
+        insights.append(f"The lowest {stat.capitalize()} is {min_stat_value} by {min_stat_pokemon}.")
+
+    return insights
+
 
 def insight_analysis(valid_data):
     st.subheader("Other Pokémon Insights")
